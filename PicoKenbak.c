@@ -106,7 +106,7 @@ int main() {
 
     /* Pin numbers. Change according to your pinout.
      * The first 12 pins in the buttons array correspond to LEDs.
-     * The first 8 are for the data LEDs (from right to left).
+     * The first 8 are for the data LEDs (from least to most significant bit).
      * The other 4 are for the control lamps.
      * The last 2 buttons don't trigger any LEDs.
      * The code works with these assumptions so handle with care.

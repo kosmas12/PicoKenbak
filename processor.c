@@ -37,27 +37,46 @@ uint8_t fetchRealOperand(AddressingMode addressingMode, uint8_t operand) {
 }
 
 uint8_t determineRegisterToUse(uint8_t instruction) {
-    uint8_t last2Bits = instruction & 0xC0;
+    uint8_t mostSignificant2bits = instruction & 0xC0;
 
-    switch (last2Bits) {
+    switch (mostSignificant2bits) {
         case 0:
             return A_REGISTER_ADDRESS;
-        case 0b01000000:
+        case 0x40:
             return B_REGISTER_ADDRESS;
-        case 0b11000000:
+        case 0xC0:
             return X_REGISTER_ADDRESS;
         default:
             // Defying the rules of binary everybody
             return 0;
     }
+}
 
+AddressingMode determineAddressingMode(uint8_t instruction) {
+    uint8_t leastSignificant3bits = instruction & 0x7;
+
+    switch (leastSignificant3bits) {
+        case 0x3:
+            return ADDRESSING_MODE_IMMEDIATE;
+        case 0x4:
+            return ADDRESSING_MODE_MEMORY;
+        case 0x5:
+            return ADDRESSING_MODE_INDIRECT;
+        case 0x6:
+            return ADDRESSING_MODE_INDEXED;
+        case 0x7:
+            return ADDRESSING_MODE_INDIRECT_INDEXED;
+        default:
+            // How did we even get here?
+            return 0;
+    }
 }
 
 void add(uint8_t instruction) {
     uint8_t registerToAddTo = determineRegisterToUse(instruction);
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
 
     uint8_t numberToAdd = fetchRealOperand(addressingMode, operand);
     uint16_t result = memory[registerToAddTo] + numberToAdd;
@@ -75,8 +94,7 @@ void sub(uint8_t instruction) {
     uint8_t registerToSubtractFrom = determineRegisterToUse(instruction);
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t numberToSubtract = fetchRealOperand(addressingMode, operand);
     uint16_t result = memory[registerToSubtractFrom] + numberToSubtract;
 
@@ -92,8 +110,7 @@ void load(uint8_t instruction) {
     uint8_t registerToLoadTo = determineRegisterToUse(instruction);
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t valueToLoad = fetchRealOperand(addressingMode, operand);
 
     memory[registerToLoadTo] = valueToLoad;
@@ -103,8 +120,7 @@ void store(uint8_t instruction) {
     uint8_t registerToStore = determineRegisterToUse(instruction);
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t addressOfValueToStore = fetchRealOperand(addressingMode, operand);
 
     memory[addressOfValueToStore] = memory[registerToStore];
@@ -112,12 +128,10 @@ void store(uint8_t instruction) {
     printf("0x%X is now %d\n", addressOfValueToStore, memory[addressOfValueToStore]);
 }
 
-
 void logicalAnd(uint8_t instruction) {
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t numberToAnd = fetchRealOperand(addressingMode, operand);
 
     memory[A_REGISTER_ADDRESS] &= numberToAnd;
@@ -126,19 +140,16 @@ void logicalAnd(uint8_t instruction) {
 void logicalOr(uint8_t instruction) {
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t numberToOr = fetchRealOperand(addressingMode, operand);
 
     memory[A_REGISTER_ADDRESS] |= numberToOr;
 }
 
-
 void loadComplement(uint8_t instruction) {
     AddressingMode addressingMode = determineAddressingMode(instruction);
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t numberToGetComplementOf = fetchRealOperand(addressingMode, operand);
 
     memory[A_REGISTER_ADDRESS] = 0 - numberToGetComplementOf;
@@ -178,55 +189,34 @@ uint8_t getRegisterToCheckForJump(uint8_t instruction) {
 }
 
 JumpCondition getJumpCondition(uint8_t instruction) {
-    uint8_t last3Bits = instruction & 0x7;
+    uint8_t leastSignificant3bits = instruction & 0x7;
 
-    switch (last3Bits) {
-        case 0b11:
+    switch (leastSignificant3bits) {
+        case 0x3:
             return JUMP_CONDITION_NON_ZERO;
-        case 0b100:
+        case 0x4:
             return JUMP_CONDITION_ZERO;
-        case 0b101:
+        case 0x5:
             return JUMP_CONDITION_NEGATIVE;
-        case 0b110:
+        case 0x6:
             return JUMP_CONDITION_POSITIVE;
-        case 0b111:
+        case 0x7:
             return JUMP_CONDITION_POSITIVE_NON_ZERO;
         default:
             // Invalid jump
-            return 255;
-    }
-}
-
-AddressingMode determineAddressingMode(uint8_t instruction) {
-    uint8_t last3Bits = instruction & 0b111;
-
-    switch (last3Bits) {
-        case 0b11:
-            return ADDRESSING_MODE_IMMEDIATE;
-        case 0b100:
-            return ADDRESSING_MODE_MEMORY;
-        case 0b101:
-            return ADDRESSING_MODE_INDIRECT;
-        case 0b110:
-            return ADDRESSING_MODE_INDEXED;
-        case 0b111:
-            return ADDRESSING_MODE_INDIRECT_INDEXED;
-        default:
-            // How did we even get here?
-            return 0;
+            return 0xFF;
     }
 }
 
 void jump(uint8_t instruction) {
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t addressToJumpTo = operand;
 
     uint8_t registerToCheck = getRegisterToCheckForJump(instruction);
     JumpCondition condition = getJumpCondition(instruction);
 
     // Invalid jump
-    if (condition == 255) {
+    if (condition == 0xFF) {
         return;
     }
 
@@ -249,33 +239,33 @@ void jump(uint8_t instruction) {
             memory[addressToJumpTo++] = operand;
         }
 
-        memory[P_REGISTER_ADDRESS] = addressToJumpTo;
+        PROGRAM_COUNTER_VALUE = addressToJumpTo;
     }
 }
 
-
 void skipOnZero(uint8_t instruction) {
-    uint8_t bitToCheck = instruction & 0x38;
+    uint8_t bitToCheck = (instruction & 0x38) >> 3;
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
 
     if (!getBit(operand, bitToCheck)) {
-        memory[P_REGISTER_ADDRESS] += 2;
+        PROGRAM_COUNTER_VALUE += 2;
     }
-
 }
 
 void skipOnOne(uint8_t instruction) {
-    uint8_t bitToCheck = instruction & 0x38;
+    uint8_t bitToCheck = (instruction & 0x38) >> 3;
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
 
     if (getBit(operand, bitToCheck)) {
-        memory[P_REGISTER_ADDRESS] += 2;
+        PROGRAM_COUNTER_VALUE += 2;
     }
 }
 
+// This is what the emulator calls for both instructions
 void skip(uint8_t instruction) {
+    // The instruction changes depending on bit 6
     if (getBit(instruction, 6)) {
         skipOnOne(instruction);
     }
@@ -285,24 +275,24 @@ void skip(uint8_t instruction) {
 }
 
 void setZero(uint8_t instruction) {
-    uint8_t bitToSet = instruction & 0x38;
+    uint8_t bitToSet = (instruction & 0x38) >> 3;
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-    operand = fetchRealOperand(ADDRESSING_MODE_INDIRECT, operand);
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
 
-    setBit(&operand, bitToSet, 0);
+    setBit(&memory[operand], bitToSet, 0);
 }
 
 void setOne(uint8_t instruction) {
-    uint8_t bitToSet = instruction & 0x38;
+    uint8_t bitToSet = (instruction & 0x38) >> 3;
 
-    uint8_t operand = memory[memory[P_REGISTER_ADDRESS]++];
-    operand = fetchRealOperand(ADDRESSING_MODE_INDIRECT, operand);
+    uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
 
-    setBit(&operand, bitToSet, 1);
+    setBit(&(memory[operand]), bitToSet, 1);
 }
 
+// This is what the emulator calls for both instructions
 void set(uint8_t instruction) {
+    // The instruction changes depending on bit 6
     if (getBit(instruction, 6)) {
         setOne(instruction);
     }
@@ -322,13 +312,18 @@ uint8_t rotateRight(uint8_t value, uint8_t places) {
     return (value >> places) | (value << ((sizeof(uint8_t) * 8) - places));
 }
 
+// These have similar opcodes, so I decided to group them together
 void shiftRotate(uint8_t instruction) {
     // 0 for Right, 1 for Left
-    uint8_t direction = instruction & 0x80;
+    uint8_t direction = (instruction & 0x80) >> 7;
     // 0 for Shift, 1 for Rotate
-    uint8_t operation = instruction & 0x40;
-    uint8_t registerToWorkOn = instruction & 0x20;
-    uint8_t places = ((instruction & 0x18) + 1) & 0x18;
+    uint8_t operation = (instruction & 0x40) >> 6;
+    uint8_t registerToWorkOn = (instruction & 0x20) >> 5;
+    uint8_t places = (instruction & 0x18) >> 3;
+    // 0 actually means 4 places
+    if (places == 0) {
+        places = 4;
+    }
 
     if (!operation) {
         if (direction) {
@@ -346,9 +341,8 @@ void shiftRotate(uint8_t instruction) {
             memory[registerToWorkOn] = rotateRight(memory[registerToWorkOn], places);
         }
     }
-
 }
 
 void nop() {
-    ++memory[P_REGISTER_ADDRESS];
+    ++PROGRAM_COUNTER_VALUE;
 }

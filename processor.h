@@ -18,6 +18,8 @@
 #define OVERFLOWANDCARRY_B_ADDRESS 0x82
 #define OVERFLOWANDCARRY_X_ADDRESS 0x83
 #define INPUT_REGISTER_ADDRESS 0xFF
+// Define to avoid confusion when looking at the code
+#define PROGRAM_COUNTER_VALUE memory[P_REGISTER_ADDRESS]
 
 typedef enum {
     ADDRESSING_MODE_IMMEDIATE,
