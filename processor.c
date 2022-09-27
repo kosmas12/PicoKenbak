@@ -87,7 +87,7 @@ void add(uint8_t instruction) {
     setBit(&memory[registerToAddTo + 0x81], CARRY_BIT, result > 0xFF);
     setBit(&memory[registerToAddTo + 0x81], OVERFLOW_BIT, result > 0x7F);
 
-    printf("0x%X is now %d from addition\n", registerToAddTo, memory[registerToAddTo]);
+    //printf("0x%X is now %d from addition\n", registerToAddTo, memory[registerToAddTo]);
 }
 
 void sub(uint8_t instruction) {
@@ -125,7 +125,7 @@ void store(uint8_t instruction) {
 
     memory[addressOfValueToStore] = memory[registerToStore];
 
-    printf("0x%X is now %d\n", addressOfValueToStore, memory[addressOfValueToStore]);
+    //printf("0x%X is now %d\n", addressOfValueToStore, memory[addressOfValueToStore]);
 }
 
 void logicalAnd(uint8_t instruction) {

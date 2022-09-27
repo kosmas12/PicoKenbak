@@ -104,7 +104,8 @@ void setControlLamps(uint8_t lampToLightUp) {
 int main() {
     stdio_init_all();
 
-    /* Pin numbers. Change according to your pinout.
+    /*
+     * Pin numbers. Change according to your pinout.
      * The first 12 pins in the buttons array correspond to LEDs.
      * The first 8 are for the data LEDs (from least to most significant bit).
      * The other 4 are for the control lamps.
@@ -134,7 +135,8 @@ int main() {
         gpio_set_dir(LEDPins[i], GPIO_OUT);
     }
 
-    /* Zero out all memory.
+    /*
+     * Zero out all memory.
      * Normally, the KENBAK's RAM is random-initialized but that's unnecessary overhead here.
      */
     for (int i = 0; i < sizeof(memory); ++i) {
