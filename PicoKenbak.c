@@ -14,9 +14,9 @@
 #define ALL_LAMPS_OFF 4
 
 void execute() {
-    // Maybe consider making execution slower for accuracy?
+    PROGRAM_COUNTER_VALUE = 0x4;
     while (gpio_get(STOP_BUTTON)) {
-        uint8_t instruction = memory[memory[P_REGISTER_ADDRESS]++];
+        uint8_t instruction = memory[PROGRAM_COUNTER_VALUE++];
         if ((instruction & 0b111) == 0) {
             if (instruction & 0b10000000) {
                 nop();
@@ -68,8 +68,10 @@ void execute() {
         else if ((instruction & 0b00100000) == 0b00100000) {
             jump(instruction);
         }
-
     }
+    // Quick hack for more accurate timing (The KENBAK-1 averaged <1000 instructions per second)
+    // TODO: More accurate timing than this
+    sleep_us(1050);
 }
 
 void setControlLamps(uint8_t lampToLightUp) {
