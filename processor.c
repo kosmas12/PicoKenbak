@@ -44,7 +44,7 @@ uint8_t determineRegisterToUse(uint8_t instruction) {
             return A_REGISTER_ADDRESS;
         case 0x40:
             return B_REGISTER_ADDRESS;
-        case 0xC0:
+        case 0x80:
             return X_REGISTER_ADDRESS;
         default:
             // Defying the rules of binary everybody
@@ -79,6 +79,7 @@ void add(uint8_t instruction) {
     uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
 
     uint8_t numberToAdd = fetchRealOperand(addressingMode, operand);
+    printf("Adding %d to %d", registerToAddTo, memory[registerToAddTo]);
     uint16_t result = memory[registerToAddTo] + numberToAdd;
 
     memory[registerToAddTo] += numberToAdd;
@@ -87,7 +88,7 @@ void add(uint8_t instruction) {
     setBit(&memory[registerToAddTo + 0x81], CARRY_BIT, result > 0xFF);
     setBit(&memory[registerToAddTo + 0x81], OVERFLOW_BIT, result > 0x7F);
 
-    //printf("0x%X is now %d from addition\n", registerToAddTo, memory[registerToAddTo]);
+    printf("0x%X is now %d from addition\n", registerToAddTo, memory[registerToAddTo]);
 }
 
 void sub(uint8_t instruction) {
@@ -114,6 +115,7 @@ void load(uint8_t instruction) {
     uint8_t valueToLoad = fetchRealOperand(addressingMode, operand);
 
     memory[registerToLoadTo] = valueToLoad;
+    printf("0x%X is now %d\n", registerToLoadTo, memory[registerToLoadTo]);
 }
 
 void store(uint8_t instruction) {
@@ -125,7 +127,7 @@ void store(uint8_t instruction) {
 
     memory[addressOfValueToStore] = memory[registerToStore];
 
-    //printf("0x%X is now %d\n", addressOfValueToStore, memory[addressOfValueToStore]);
+    printf("0x%X is now %d\n", addressOfValueToStore, memory[addressOfValueToStore]);
 }
 
 void logicalAnd(uint8_t instruction) {
@@ -176,15 +178,20 @@ uint8_t checkForJumpCondition(uint8_t registerToCheck, JumpCondition condition) 
 }
 
 uint8_t getRegisterToCheckForJump(uint8_t instruction) {
-    if (getBit(instruction, 6) && getBit(instruction, 7)) {
+    uint8_t twoMostSignificantBits = (instruction & 0xC0) >> 6;
+    if (twoMostSignificantBits == 0) {
+        //printf("A ");
         return A_REGISTER_ADDRESS;
     }
-    if (getBit(instruction, 6)) {
+    else if (twoMostSignificantBits == 1) {
+        //printf("B is %d\n", memory[B_REGISTER_ADDRESS]);
         return B_REGISTER_ADDRESS;
     }
-    if (getBit(instruction, 7)) {
+    else if (twoMostSignificantBits == 0b10) {
+        //printf("X ");
         return X_REGISTER_ADDRESS;
     }
+    //printf("Unconditional ");
     return 0;
 }
 
@@ -193,24 +200,32 @@ JumpCondition getJumpCondition(uint8_t instruction) {
 
     switch (leastSignificant3bits) {
         case 0x3:
+            //printf("Non-zero\n");
             return JUMP_CONDITION_NON_ZERO;
         case 0x4:
+            //printf("Zero\n");
             return JUMP_CONDITION_ZERO;
         case 0x5:
+            //printf("Negative\n");
             return JUMP_CONDITION_NEGATIVE;
         case 0x6:
+            //printf("Positive\n");
             return JUMP_CONDITION_POSITIVE;
         case 0x7:
+            //printf("Positive Non-zero\n");
             return JUMP_CONDITION_POSITIVE_NON_ZERO;
         default:
             // Invalid jump
+            //printf("Invalid\n");
             return 0xFF;
     }
 }
 
 void jump(uint8_t instruction) {
+    printf("Instruction: 0x%X", instruction);
     uint8_t operand = memory[PROGRAM_COUNTER_VALUE++];
     uint8_t addressToJumpTo = operand;
+    printf("Operand is %d\n", addressToJumpTo);
 
     uint8_t registerToCheck = getRegisterToCheckForJump(instruction);
     JumpCondition condition = getJumpCondition(instruction);
@@ -228,18 +243,22 @@ void jump(uint8_t instruction) {
     uint8_t mark = getBit(instruction, 4);
     uint8_t indirect = getBit(instruction, 3);
 
-    uint8_t shouldJump = checkForJumpCondition(registerToCheck, condition);
+    uint8_t shouldJump = checkForJumpCondition(memory[registerToCheck], condition);
 
     if(shouldJump) {
         if (indirect) {
+            //printf("Indirect\n");
             addressToJumpTo = memory[operand];
         }
 
         if (mark) {
+            //printf("Mark\n");
             memory[addressToJumpTo++] = operand;
         }
 
+        //printf("Executing jump to address %d\n", addressToJumpTo);
         PROGRAM_COUNTER_VALUE = addressToJumpTo;
+        //printf("Jumped to address %d\n", PROGRAM_COUNTER_VALUE);
     }
 }
 

@@ -17,56 +17,62 @@ void execute() {
     PROGRAM_COUNTER_VALUE = 0x4;
     while (gpio_get(STOP_BUTTON)) {
         uint8_t instruction = memory[PROGRAM_COUNTER_VALUE++];
-        if ((instruction & 0b111) == 0) {
-            if (instruction & 0b10000000) {
-                nop();
+        if (instruction == 0) {
+            return;
+        }
+        if ((instruction & 0b111) == 02) {
+            set(instruction);
+            continue;
+        }
+        else if ((instruction & 0b111) == 01) {
+            switch (((instruction & 0xE0) >> 5)) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                    shiftRotate(instruction);
             }
-            // Halt
-            else {
-                return;
-            }
+            continue;
         }
-
-        else if ((instruction & 0b00000111) == 0b00000001) {
-                shiftRotate(instruction);
-        }
-
-        else if ((instruction & 0b00000111) == 0b0000010) {
-            if ((instruction & 0b10000000) == 0b10000000) {
-                skip(instruction);
-            }
-            else {
-                set(instruction);
-            }
-        }
-
-        else if ((instruction & 0b11111000) == 0b11011000) {
-            loadComplement(instruction);
-        }
-
-        else if ((instruction & 0b11111000) == 0b11000000) {
-            logicalOr(instruction);
-        }
-
-        else if ((instruction & 0b11111000) == 0b11010000) {
-            logicalAnd(instruction);
-        }
-
-        else if ((instruction & 0b00111000) == 0b00011000) {
-            store(instruction);
-        }
-
-        else if ((instruction & 0b00111000) == 0b00010000) {
-            load(instruction);
-        }
-        else if ((instruction & 0b00111000) == 0b00001000) {
-            sub(instruction);
-        }
-        else if ((instruction & 0b00111000) == 0) {
-            add(instruction);
-        }
-        else if ((instruction & 0b00100000) == 0b00100000) {
-            jump(instruction);
+        switch (((instruction & 0b00111000) >> 3)) {
+            case 00:
+                if (((instruction & 0xE0) >> 5) == 03) {
+                    logicalOr(instruction);
+                }
+                else {
+                    add(instruction);
+                }
+                break;
+            case 01:
+                if (((instruction & 0xE0) >> 5) == 03) {
+                    nop();
+                }
+                else {
+                    sub(instruction);
+                }
+                break;
+            case 02:
+                if (((instruction & 0xE0) >> 5) == 03) {
+                    logicalAnd(instruction);
+                }
+                else {
+                    load(instruction);
+                }
+                break;
+            case 03:
+                if (((instruction & 0xE0) >> 5) == 03) {
+                    loadComplement(instruction);
+                }
+                else {
+                    store(instruction);
+                }
+                break;
+            case 04:
+            case 05:
+            case 06:
+            case 07:
+                jump(instruction);
+                break;
         }
     }
     // Quick hack for more accurate timing (The KENBAK-1 averaged <1000 instructions per second)
